@@ -77,9 +77,28 @@ const typeDefs = `
     }
 
     type Mutation {
-      createUser(name: String!, email: String!, age: Int): User!
-      createPost(title: String!, body: String!, published: Boolean!, author: ID!): Post!
-      createComment(body: String!, authorId: ID!, postId: ID!): Comment!
+      createUser(data: CreateUserInput!): User!
+      createPost(data: CreatePostInput!): Post!
+      createComment(data: CreateCommentInput!): Comment!
+    }
+
+    input CreateUserInput {
+      name: String!
+      email: String!
+      age: Int
+    }
+
+    input CreatePostInput {
+      title: String! 
+      body: String!
+      published: Boolean!
+      author: ID!
+    }
+
+    input CreateCommentInput {
+      body: String!
+      author: ID!
+      post: ID!
     }
 
     type User {
@@ -153,8 +172,8 @@ const resolvers = {
     }
   },
   Mutation: {
-    createUser(parent, { name, email, age }, ctx, info) {
-      const existingUser = users.some(user => user.email === email);
+    createUser(parent, { data }, ctx, info) {
+      const existingUser = users.some(user => user.email === data.email);
 
       if (existingUser) {
         throw new Error('Email taken.');
@@ -162,42 +181,35 @@ const resolvers = {
 
       const newUser = {
         id: uuid(),
-        name,
-        email,
-        age
+        ...data
       };
       users.push(newUser);
       return newUser;
     },
-    createPost(parent, { title, body, published, author }, ctx, info) {
-      const existingUser = users.some(user => user.id === author);
+    createPost(parent, { data }, ctx, info) {
+      const existingUser = users.some(user => user.id === data.author);
       if (!existingUser) {
         throw new Error("User doesn't exists.");
       }
 
       const newPost = {
         id: uuid(),
-        title,
-        body,
-        published,
-        author
+        ...data
       };
 
       posts.push(newPost);
       return newPost;
     },
-    createComment(parent, { body, authorId, postId }, ctx, info) {
+    createComment(parent, { data }, ctx, info) {
       const existingUserAndPost =
-        users.some(user => user.id === authorId) &&
-        posts.some(post => post.id === postId && post.published);
+        users.some(user => user.id === data.author) &&
+        posts.some(post => post.id === data.post && post.published);
       if (!existingUserAndPost) {
         throw new Error("User or post doesn't exist.");
       }
       const newComment = {
         id: uuid(),
-        body,
-        author: authorId,
-        post: postId
+        ...data
       };
       comments.push(newComment);
       return newComment;
