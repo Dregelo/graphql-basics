@@ -1,4 +1,5 @@
 import { GraphQLServer } from 'graphql-yoga';
+import uuid from 'uuid/v4';
 
 // Demo user Data
 const users = [
@@ -75,6 +76,12 @@ const typeDefs = `
       post: Post!
     }
 
+    type Mutation {
+      createUser(name: String!, email: String!, age: Int): User!
+      createPost(title: String!, body: String!, published: Boolean!, author: ID!): Post!
+      createComment(body: String!, authorId: ID!, postId: ID!): Comment!
+    }
+
     type User {
       id: ID!
       name: String!
@@ -145,6 +152,58 @@ const resolvers = {
       };
     }
   },
+  Mutation: {
+    createUser(parent, { name, email, age }, ctx, info) {
+      const existingUser = users.some(user => user.email === email);
+
+      if (existingUser) {
+        throw new Error('Email taken.');
+      }
+
+      const newUser = {
+        id: uuid(),
+        name,
+        email,
+        age
+      };
+      users.push(newUser);
+      return newUser;
+    },
+    createPost(parent, { title, body, published, author }, ctx, info) {
+      const existingUser = users.some(user => user.id === author);
+      if (!existingUser) {
+        throw new Error("User doesn't exists.");
+      }
+
+      const newPost = {
+        id: uuid(),
+        title,
+        body,
+        published,
+        author
+      };
+
+      posts.push(newPost);
+      return newPost;
+    },
+    createComment(parent, { body, authorId, postId }, ctx, info) {
+      const existingUserAndPost =
+        users.some(user => user.id === authorId) &&
+        posts.some(post => post.id === postId && post.published);
+      if (!existingUserAndPost) {
+        throw new Error("User or post doesn't exist.");
+      }
+      const newComment = {
+        id: uuid(),
+        body,
+        author: authorId,
+        post: postId
+      };
+      comments.push(newComment);
+      return newComment;
+    }
+  },
+
   Post: {
     author(parent, args, ctx, info) {
       return users.find(user => {
