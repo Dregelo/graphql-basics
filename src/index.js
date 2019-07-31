@@ -1,6 +1,8 @@
-import { GraphQLServer } from 'graphql-yoga';
+import { GraphQLServer, PubSub } from 'graphql-yoga';
 import db from './db';
 import ResolversBundle from './resolvers/ResolversBundle';
+
+const pubsub = new PubSub();
 
 const server = new GraphQLServer({
   typeDefs: './src/schema.graphql',
@@ -8,7 +10,8 @@ const server = new GraphQLServer({
     ...ResolversBundle
   },
   context: {
-    db
+    db,
+    pubsub
   }
 });
 
