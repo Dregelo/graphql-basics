@@ -12,7 +12,12 @@ const createComment = (parent, { data }, { pubsub, db }, info) => {
     ...data
   };
   db.comments.push(newComment);
-  pubsub.publish(`comment: ${data.post}`, { comment: newComment });
+  pubsub.publish(`comment: ${data.post}`, {
+    comment: {
+      mutation: 'CREATED',
+      data: newComment
+    }
+  });
   return newComment;
 };
 
@@ -21,8 +26,9 @@ const deleteComment = (parent, { id }, { db }, info) => {
   if (commentId === -1) {
     throw new Error("Comment doesn't exist.");
   }
-  const deletedComment = db.comments.splice(commentId, 1);
-  return deletedComment[0];
+  const [deletedComment] = db.comments.splice(commentId, 1);
+  pubsub.publish(`comment ${id}`);
+  return deletedComment;
 };
 
 const updateComment = (parent, { id, data }, { db }, info) => {
