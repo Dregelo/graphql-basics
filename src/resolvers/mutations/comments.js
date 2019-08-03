@@ -1,6 +1,6 @@
 import uuid from 'uuid/v4';
 
-const createComment = (parent, { data }, { pubsub, db }, info) => {
+const createComment = (parent, { data }, { db, pubsub }, info) => {
   const existingUserAndPost =
     db.users.some(user => user.id === data.author) &&
     db.posts.some(post => post.id === data.post && post.published);
@@ -21,17 +21,22 @@ const createComment = (parent, { data }, { pubsub, db }, info) => {
   return newComment;
 };
 
-const deleteComment = (parent, { id }, { db }, info) => {
+const deleteComment = (parent, { id }, { db, pubsub }, info) => {
   const commentId = db.comments.findIndex(comment => comment.id === id);
   if (commentId === -1) {
     throw new Error("Comment doesn't exist.");
   }
   const [deletedComment] = db.comments.splice(commentId, 1);
-  pubsub.publish(`comment ${id}`);
+  pubsub.publish(`comment: ${deletedComment.post}`, {
+    comment: {
+      mutation: 'DELETED',
+      data: deletedComment
+    }
+  });
   return deletedComment;
 };
 
-const updateComment = (parent, { id, data }, { db }, info) => {
+const updateComment = (parent, { id, data }, { db, pubsub }, info) => {
   const comment = db.comments.find(comment => comment.id === id);
   if (!comment) {
     throw new Error("Comment doesn't exist.");
@@ -39,6 +44,12 @@ const updateComment = (parent, { id, data }, { db }, info) => {
   if (typeof data.body === 'string') {
     comment.body = data.body;
   }
+  pubsub.publish(`comment: ${comment.post}`, {
+    comment: {
+      mutation: 'UPDATED',
+      data: comment
+    }
+  });
   return comment;
 };
 
